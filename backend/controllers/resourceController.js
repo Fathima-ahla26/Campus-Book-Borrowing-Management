@@ -77,10 +77,11 @@ const createResource = async (req, res) => {
     } catch (error) {
         console.error("Create resource error:", error);
 
-        res.status(400).json({
-            success: false,
-            message: error.message || "Failed to create resource"
-        });
+res.status(400).json({
+    success: false,
+    message: error.message || "Failed to create resource",
+    error: error
+});
     }
 };
 
