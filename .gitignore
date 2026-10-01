@@ -1,8 +1,24 @@
-node_modules/
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
-uploads/*
-!.gitkeep
+
+# Node dependencies
+node_modules/
+
+# Expo generated files
 .expo/
+.expo-shared/
+dist/
+web-build/
+
+# Logs
+*.log
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/*
+!.vscode/settings.json
