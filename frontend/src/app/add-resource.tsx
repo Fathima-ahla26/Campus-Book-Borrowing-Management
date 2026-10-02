@@ -11,30 +11,53 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { apiRequest } from "../api/api";
+import { apiRequest } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
 export default function AddResourceScreen() {
   const { token } = useAuth();
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] =
-    useState("");
-  const [category, setCategory] =
-    useState("Book");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Book");
   const [type, setType] = useState("Book");
+  const [contactInfo, setContactInfo] = useState("");
   const [mode, setMode] = useState("Lend");
   const [price, setPrice] = useState("");
 
   const [loading, setLoading] = useState(false);
 
-  async function createResource() {
-    if (!token) return;
+  // async function createResource() {
+  //   if (!token) {
+  //     Alert.alert("Not logged in", "Please log in first.");
+  //     return;
+  //   }
+    async function createResource() {
+  console.log("RESOURCE TOKEN:", token);
 
-    if (!title.trim() || !description.trim()) {
+  if (!token) {
+    Alert.alert("Not logged in", "Please log in first.");
+    return;
+  }
+
+  //
+
+    if (
+      !title.trim() ||
+      !description.trim() ||
+      !contactInfo.trim()
+    ) {
       Alert.alert(
         "Missing information",
-        "Title and description are required."
+        "Please fill in title, description, and contact information."
+      );
+      return;
+    }
+
+    if (mode === "Sell" && !price.trim()) {
+      Alert.alert(
+        "Missing price",
+        "Please enter a price for a resource being sold."
       );
       return;
     }
@@ -47,29 +70,32 @@ export default function AddResourceScreen() {
         description: description.trim(),
         category,
         type,
+        contactInfo: contactInfo.trim(),
         mode,
-        price:
-          mode === "Sell"
-            ? Number(price || 0)
-            : 0,
+        price: mode === "Sell" ? Number(price) : 0,
       };
 
-      await apiRequest(
-        "/resources",
-        {
-          method: "POST",
-          body: JSON.stringify(body),
-        },
-        token
-      );
+      const data = await apiRequest("/api/resources", {
+        method: "POST",
+        body,
+        token,
+      });
+
+      console.log("RESOURCE CREATED:", data);
 
       Alert.alert(
         "Resource created",
-        "Your resource has been added to CampusShare."
+        "Your resource has been added to CampusShare.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.replace("/home"),
+          },
+        ]
       );
-
-      router.replace("/home");
     } catch (error: any) {
+      console.error("CREATE RESOURCE ERROR:", error);
+
       Alert.alert(
         "Unable to create resource",
         error.message ||
@@ -93,9 +119,7 @@ export default function AddResourceScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          onPress={() => router.back()}
-        >
+        <Pressable onPress={() => router.back()}>
           <Text style={styles.back}>← Back</Text>
         </Pressable>
 
@@ -104,22 +128,24 @@ export default function AddResourceScreen() {
         </Text>
 
         <Text style={styles.subtitle}>
-          Share a book or study resource with
-          other students.
+          Share a book or study resource with other
+          students.
         </Text>
 
         <View style={styles.card}>
+          {/* TITLE */}
           <Text style={styles.label}>
             Title *
           </Text>
 
           <TextInput
             style={styles.input}
-            placeholder="e.g. Software Engineering Notes"
+            placeholder="e.g. Database System Concepts"
             value={title}
             onChangeText={setTitle}
           />
 
+          {/* DESCRIPTION */}
           <Text style={styles.label}>
             Description *
           </Text>
@@ -135,8 +161,9 @@ export default function AddResourceScreen() {
             multiline
           />
 
+          {/* CATEGORY */}
           <Text style={styles.label}>
-            Category
+            Category *
           </Text>
 
           <View style={styles.options}>
@@ -172,8 +199,9 @@ export default function AddResourceScreen() {
             ))}
           </View>
 
+          {/* TYPE */}
           <Text style={styles.label}>
-            Type
+            Type *
           </Text>
 
           <View style={styles.options}>
@@ -181,6 +209,7 @@ export default function AddResourceScreen() {
               "Book",
               "Novel",
               "Academic",
+              "Personal",
               "Past Paper",
               "Notes",
               "Study Material",
@@ -210,8 +239,26 @@ export default function AddResourceScreen() {
             ))}
           </View>
 
+          {/* CONTACT INFORMATION */}
           <Text style={styles.label}>
-            Sharing Mode
+            Contact Information *
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. WhatsApp: 0771234567"
+            value={contactInfo}
+            onChangeText={setContactInfo}
+          />
+
+          <Text style={styles.helperText}>
+            Students can use this information to
+            contact you about the resource.
+          </Text>
+
+          {/* SHARING MODE */}
+          <Text style={styles.label}>
+            Sharing Mode *
           </Text>
 
           <View style={styles.row}>
@@ -240,15 +287,16 @@ export default function AddResourceScreen() {
             ))}
           </View>
 
+          {/* PRICE */}
           {mode === "Sell" && (
             <>
               <Text style={styles.label}>
-                Price (LKR)
+                Price (LKR) *
               </Text>
 
               <TextInput
                 style={styles.input}
-                placeholder="0"
+                placeholder="e.g. 2500"
                 value={price}
                 onChangeText={setPrice}
                 keyboardType="numeric"
@@ -256,14 +304,26 @@ export default function AddResourceScreen() {
             </>
           )}
 
-          <Text style={styles.imageNote}>
-            📷 Image upload can be attached to this
-            resource. We will connect the image
-            picker after the core API flow is working.
-          </Text>
+          {/* IMAGE */}
+          <View style={styles.imageBox}>
+            <Text style={styles.imageTitle}>
+              📷 Resource Image
+            </Text>
 
+            <Text style={styles.imageText}>
+              Image upload is supported by the
+              backend. We will connect the Expo
+              image picker after the core resource
+              creation flow is confirmed.
+            </Text>
+          </View>
+
+          {/* CREATE BUTTON */}
           <Pressable
-            style={styles.button}
+            style={[
+              styles.button,
+              loading && styles.buttonDisabled,
+            ]}
             onPress={createResource}
             disabled={loading}
           >
@@ -378,13 +438,28 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  imageNote: {
+  helperText: {
+    color: "#64748B",
+    fontSize: 12,
+    marginTop: 5,
+  },
+
+  imageBox: {
     backgroundColor: "#F1F5F9",
-    padding: 12,
-    borderRadius: 8,
-    color: "#475569",
+    padding: 14,
+    borderRadius: 10,
     marginTop: 18,
-    lineHeight: 19,
+  },
+
+  imageTitle: {
+    color: "#334155",
+    fontWeight: "700",
+    marginBottom: 5,
+  },
+
+  imageText: {
+    color: "#64748B",
+    lineHeight: 18,
   },
 
   button: {
@@ -393,6 +468,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     marginTop: 18,
+  },
+
+  buttonDisabled: {
+    opacity: 0.6,
   },
 
   buttonText: {
